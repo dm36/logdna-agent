@@ -144,6 +144,39 @@ jobs:
           paths:
             - ./scripts/windows/VERSION.txt
             - ./logdna-agent.latest.zip
+  build_macos:
+    docker:
+      - image: circleci/node:10
+    steps:
+      - checkout
+      - run:
+          name: Check Tagged Push
+          command: |
+            PKG_VERSION=$(cat package.json | grep version | cut -d':' -f2 | cut -d'"' -f2)
+            if [[ "${CIRCLE_TAG}" != "${PKG_VERSION}" ]]; then
+              echo "There is mismatch:"
+              echo "  TAG_VERSION: ${CIRCLE_TAG}"
+              echo "  PKG_VERSION: ${PKG_VERSION}"
+              exit 1
+            fi
+      - run:
+          name: Install Dependencies - AWS CLI, Grunt CLI, and NEXE
+          command: |
+            sudo apt-get update
+            sudo apt-get install -y python3 python-dev python3-dev \
+              build-essential libssl-dev libffi-dev \
+              libxml2-dev libxslt1-dev zlib1g-dev python-pip
+            sudo pip install --upgrade pip
+            sudo pip install awscli
+            sudo npm install -g nexe grunt-cli
+      - run:
+          name: Do Gruntfile Steps
+          command: |
+            VERSION=$(git tag --sort=-creatordate | head -n 1 | cut -d'-' -f2)
+            npm install
+            npm install grunt grunt-cli --save-dev
+            grunt lineremover && grunt eslint
+            nexe -i index.js -t macos-x64-10.16.0 -o scripts/macos/logdna-agent
   push_to_choco:
     docker:
       - image: linuturk/mono-choco
