@@ -163,12 +163,15 @@ jobs:
           name: Install Dependencies - AWS CLI, Grunt CLI, and NEXE
           command: |
             sudo apt-get update
-            sudo apt-get install -y python3 python-dev python3-dev \
+            sudo apt-get install -y \
+              python3 python-dev python3-dev \
               build-essential libssl-dev libffi-dev \
-              libxml2-dev libxslt1-dev zlib1g-dev python-pip
+              libxml2-dev libxslt1-dev zlib1g-dev python-pip \
+              ruby ruby-dev rubygems
             sudo pip install --upgrade pip
             sudo pip install awscli
             sudo npm install -g nexe grunt-cli
+            sudo gem install --no-ri --no-rdoc fpm
       - run:
           name: Do Gruntfile Steps
           command: |
@@ -176,7 +179,23 @@ jobs:
             npm install
             npm install grunt grunt-cli --save-dev
             grunt lineremover && grunt eslint
-            nexe -i index.js -t macos-x64-10.16.0 -o scripts/macos/logdna-agent
+            nexe -i index.js -t macos-x64-10.16.0 -o scripts/mac/logdna-agent
+            fpm \
+              -s dir \
+              -t osxpkg \
+              -n logdna-agent \
+              -v ${VERSION} \
+              --license MIT \
+              --vendor 'LogDNA, Inc.' \
+              --description 'LogDNA Agent for Mac' \
+              --url http://logdna.com/ \
+              -m '<support@logdna.com>' \
+              --after-install ./scripts/mac/mac-after-install \
+              --before-remove ./scripts/mac/uninstall-mac-agent \
+              --osxpkg-identifier-prefix com.logdna \
+              -f ./scripts/mac/logdna-agent=/usr/local/bin/logdna-agent ./scripts/mac/com.logdna.logdna-agent.plist=/Library/LaunchDaemons/com.logdna.logdna-agent.plist
+            productsign \
+              --sign 'Developer ID Installer: Answerbook, Inc. (TT7664HMU3)' logdna-agent-${VERSION}.pkg logdna-agent.pkg
   push_to_choco:
     docker:
       - image: linuturk/mono-choco
