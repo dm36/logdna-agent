@@ -1,3 +1,4 @@
+swag
 # logdna-agent
 
 [![Build Status](https://travis-ci.org/logdna/logdna-agent.svg?branch=master)](https://travis-ci.org/logdna/logdna-agent)
